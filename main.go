@@ -2,12 +2,9 @@ package main
 
 import (
 	"crypto/tls"
-
 	"fmt"
-
-	"strings"
-
 	"os"
+	"strings"
 	"time"
 
 	"github.com/spf13/viper"
@@ -63,10 +60,7 @@ func main() {
 		if strings.HasPrefix(channame, "#") {
 			// We have a message in a channel
 
-			if message == "..quit()" {
-				irccon.Privmsgf(channame, "%s: Good bye.\n", nick)
-				irccon.Quit()
-			} else if strings.HasPrefix(message, "..") {
+			if strings.HasPrefix(message, "#hello") {
 				// Let us reply back
 				irccon.Privmsgf(channame, "%s: hello\n", nick)
 			} else if strings.HasPrefix(message, "add: ") {
