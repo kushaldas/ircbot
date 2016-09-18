@@ -58,6 +58,11 @@ func main() {
 					masters[newmaster] = true
 					irccon.Privmsgf(channame, "%s is now a master.\n", newmaster)
 				}
+			} else if strings.HasPrefix(message, "rm: ") && masters[nick] {
+				oldmaster := strings.Split(message, " ")[1]
+				delete(masters, oldmaster)
+				irccon.Privmsgf(channame, "%s is now removed from masters.\n", oldmaster)
+
 			} else if message == "!" {
 				if !classStatus {
 					msg := fmt.Sprintf("%s no class is going on. Feel free to ask any question.\n", nick)
