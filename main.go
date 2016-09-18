@@ -10,21 +10,41 @@ import (
 	"os"
 	"time"
 
+	"github.com/spf13/viper"
 	"github.com/thoj/go-ircevent"
 )
 
 const serverssl = "irc.freenode.net:7000"
-const channel = "#bcrec"
 
-var masters = map[string]bool{"kushal": true, "sayan": true,
-	"rtnpro": true, "chandankumar": true, "praveenkumar": true}
+var masters = map[string]bool{}
 var questions []string
 var queue = map[string]bool{}
 
 func main() {
 	var f *os.File
 	var classStatus bool
-	irccon := irc.IRC("testkd", "Kushal Das")
+
+	// The following is for configuration using viper
+	viper.SetConfigName("config")
+	viper.AddConfigPath("./")
+	err := viper.ReadInConfig()
+
+	if err != nil {
+		fmt.Println("No configuration file loaded - using defaults")
+	}
+	viper.SetDefault("nick", "yournick")
+	viper.SetDefault("fullname", "Our nice bot")
+	viper.SetDefault("channel", "#yooooooops")
+	viper.SetDefault("masters", []string{"kushal"})
+
+	channel := viper.GetString("channel")
+	ms := viper.GetStringSlice("masters")
+	// Now let us populate the masters map
+	for _, v := range ms {
+		masters[v] = true
+	}
+
+	irccon := irc.IRC(viper.GetString("nick"), viper.GetString("fullname"))
 	defer irccon.Quit()
 	irccon.VerboseCallbackHandler = true
 	irccon.Debug = false
@@ -36,7 +56,6 @@ func main() {
 		irccon.Privmsg(channel, "Joined in.\n")
 	})
 	irccon.AddCallback("PRIVMSG", func(e *irc.Event) {
-		fmt.Println(e.Message())
 		channame := e.Arguments[0]
 		nick := e.Nick
 		message := e.Message()
@@ -80,6 +99,7 @@ func main() {
 					if len(questions) > 0 {
 						irccon.Privmsgf(channame, fmt.Sprintf("%s you are next, get ready with your question.\n", questions[0]))
 					}
+					delete(queue, cnick)
 				} else {
 					irccon.Privmsgf(channame, "No one is in the queue.\n")
 				}
@@ -114,7 +134,7 @@ func main() {
 		}
 	})
 
-	err := irccon.Connect(serverssl)
+	err = irccon.Connect(serverssl)
 	if err != nil {
 		fmt.Println(err)
 		irccon.Quit()
