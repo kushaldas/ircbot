@@ -4,8 +4,8 @@ This is the new bot which we use in #dgplug channel for summer training.
 
 ## Development
 
-go get github.com/thoj/go-ircevent
-go get github.com/spf13/viper
+- go get github.com/thoj/go-ircevent
+- go get github.com/spf13/viper
 
 ## Config file
 
