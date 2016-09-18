@@ -92,6 +92,12 @@ func main() {
 		} else if masters[nick] {
 			if message == "showqueue" {
 				irccon.Privmsg(nick, strings.Join(questions, ","))
+			} else if message == "masters" {
+				localname := []string{}
+				for k, _ := range masters {
+					localname = append(localname, k)
+				}
+				irccon.Privmsg(nick, strings.Join(localname, ","))
 			}
 		}
 	})
