@@ -71,6 +71,18 @@ func main() {
 					questions = append(questions, nick)
 					queue[nick] = true
 				}
+			} else if message == "next" && masters[nick] {
+				l := len(questions)
+				if l > 0 {
+					cnick := questions[0]
+					questions = questions[1:]
+					irccon.Privmsgf(channame, fmt.Sprintf("%s ask your question.", cnick))
+					if len(questions) > 0 {
+						irccon.Privmsgf(channame, fmt.Sprintf("%s you are next, get ready with your question.\n", questions[0]))
+					}
+				} else {
+					irccon.Privmsgf(channame, "No one is in the queue.\n")
+				}
 			} else if message == "startclass" && !classStatus && masters[nick] {
 				// We will start a class now
 				irccon.Privmsgf(channame, "----BEGIN CLASS----\n")
