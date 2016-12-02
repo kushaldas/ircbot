@@ -102,7 +102,7 @@ func main() {
 				irccon.Privmsgf(channame, "----BEGIN CLASS----\n")
 				classStatus = true
 				t := time.Now().UTC()
-				fname := t.Format("Logs-2006-01-02-15-04.txt")
+				fname := t.Format("Logs-" + t.Format("2006-01-02-15-04") + ".txt")
 				f, _ = os.Create(fname)
 				f.WriteString("----BEGIN CLASS----\n")
 			} else if message == "endclass" && classStatus && masters[nick] {
