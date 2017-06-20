@@ -6,10 +6,15 @@
 Welcome to ircbot's documentation!
 ==================================
 
+This is the bot used for #dgplug summer trianing program.
+Please read the usage guide if you want to use it for
+your channel.
+
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
 
+   usage
 
 
 Indices and tables
