@@ -3,10 +3,11 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to ircbot's documentation!
+Welcome to ircbot’s documentation!
 ==================================
 
-This is the bot used for #dgplug summer trianing program.
+This is the bot used for #dgplug summer training program.
+
 Please read the usage guide if you want to use it for
 your channel.
 
