@@ -7,6 +7,9 @@ import (
 	"strings"
 	"time"
 
+	"bytes"
+	"os/exec"
+
 	"github.com/spf13/viper"
 	"github.com/thoj/go-ircevent"
 )
@@ -17,8 +20,28 @@ var masters = map[string]bool{}
 var questions []string
 var queue = map[string]bool{}
 
+/*
+Runs the scp command with the given paths.
+*/
+func scp(frompath string, topath string, optargs ...string) bool {
+	var cmd *exec.Cmd
+	args := []string{frompath, topath}
+	cmd = exec.Command("scp", args...)
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	err := cmd.Run()
+	if err != nil {
+		fmt.Println("Error in scp:", err)
+		return false
+	} else {
+		fmt.Println("Log uploaded")
+	}
+	return true
+}
+
 func main() {
 	var f *os.File
+	var fname string
 	var classStatus bool
 	canAsk := true
 
@@ -81,6 +104,13 @@ func main() {
 				canAsk = false
 			} else if strings.HasPrefix(message, "#questions on") && masters[nick] {
 				canAsk = true
+			} else if strings.HasPrefix(message, "#questions") && masters[nick] {
+				var word = "No"
+				if canAsk {
+					word = "Yes"
+				}
+				msg := fmt.Sprintf("Can students ask question?: %s.\n", word)
+				irccon.Privmsgf(channame, msg)
 			} else if message == "!" {
 				if !classStatus {
 					msg := fmt.Sprintf("%s no class is going on. Feel free to ask any question.\n", nick)
@@ -106,15 +136,26 @@ func main() {
 				// We will start a class now
 				irccon.Privmsgf(channame, "----BEGIN CLASS----\n")
 				classStatus = true
+				canAsk = true
 				t := time.Now().UTC()
-				fname := t.Format("Logs-2006-01-02-15-04.txt")
+				fname = t.Format("Logs-2006-01-02-15-04.txt")
 				f, _ = os.Create(fname)
 				f.WriteString("----BEGIN CLASS----\n")
-			} else if message == "#endclass" && classStatus && masters[nick] {
+			} else if strings.HasPrefix(message, "#endclass") && classStatus && masters[nick] {
 				irccon.Privmsgf(channame, "----END CLASS----\n")
 				classStatus = false
 				f.WriteString("----END CLASS----\n")
 				f.Close()
+				if !strings.HasSuffix(message, "nolog") {
+					// Now we will upload the log
+					location := viper.GetString("destination")
+					status := scp(fname, location)
+					if status {
+						irccon.Privmsgf(channame, "Log uploaded successfully.\n")
+					} else {
+						irccon.Privmsgf(channame, "Did not upload the log.\n")
+					}
+				}
 			}
 			// Now log the messages
 			tstamp := time.Now().UTC()
