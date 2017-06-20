@@ -69,7 +69,7 @@ the bot will try to upload the log. So, you can end in a different way, which wi
 
     #endclass nolog
 
-Raise a hand to ask a quesion
+Raise a hand to ask a question
 =============================
 
 ::
@@ -86,20 +86,20 @@ Ask the next person to ask the question
 
     next
 
-Stop taking anymore quesions
+Stop taking anymore questions
 ============================
 
 ::
 
-    #quesions off
+    #questions off
 
 
-Start taking quesions again
+Start taking questions again
 ===========================
 
 ::
 
-    #quesions on
+    #questions on
 
 
 Can students ask questions now?
