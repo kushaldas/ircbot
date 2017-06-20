@@ -3,13 +3,15 @@ Usage of ircbot
 ================
 
 
-This is a bot written for #dgplug summer training. This also means it follows the way we organize the sessions on
+This is a bot written for #dgplug summer training.
+This also means it follows the way, we organize the sessions on
 #dgplug channel on freenode.
 
 config.yml
 ===========
 
-This file contains the configuration of the tool. Example is given below:
+This file contains the configuration of the tool.
+An example is given below:
 
 ::
 
@@ -26,7 +28,7 @@ This file contains the configuration of the tool. Example is given below:
      - rtnpro
      - mbuf
 
-Masters are nicks which has power over the bot. They can do various actions as explained below.
+Masters are nicks who have power over the bot. They can execute various actions, as explained below.
 
 Add a master
 ============
@@ -44,7 +46,7 @@ Removes a master
 
     rm: nick_to_remove
 
-Removes a given nick from master list.
+Removes a given nick, from the master list.
 
 Start a session
 ===============
@@ -53,7 +55,7 @@ Start a session
 
     #startclass
 
-Give the above command in the *IRC channel* itself. Remember that this does not work in PM.
+Give the above command in the *IRC channel* itself. Remember, that this does not work in PM.
 
 End a class
 ============
@@ -62,8 +64,10 @@ End a class
 
     #endclass
 
-This ends the class. This also has to be provided in the channel itself. After ending the session
-the bot will try to upload the log. So, you can end in a different way, which will not try to upload the log.
+This ends the class. This also has to be provided in the channel itself.  
+After ending the session the bot will try to upload the log.
+
+You can also end in a different way, which doesn’t try to upload the log.
 
 ::
 
@@ -76,22 +80,22 @@ Raise a hand to ask a quesion
 
     !
 
-Only typing a ! puts you on the question queue.
+Typing only a ! puts you on the question queue.
 
 
-Ask the next person to ask the question
-=======================================
+Ask the next person to ask their question
+=========================================
 
 ::
 
     next
 
-Stop taking anymore quesions
-============================
+Stop taking quesions
+====================
 
 ::
 
-    #quesions off
+    #questions off
 
 
 Start taking quesions again
@@ -99,15 +103,15 @@ Start taking quesions again
 
 ::
 
-    #quesions on
+    #questions on
 
 
 Can students ask questions now?
-================================
+===============================
 
 
 ::
 
     #questions
 
-This gets reset to true everytime we star a new session.
+This gets reset to true, everytime we start a new session.
