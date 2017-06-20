@@ -20,6 +20,7 @@ var queue = map[string]bool{}
 func main() {
 	var f *os.File
 	var classStatus bool
+	canAsk := true
 
 	// The following is for configuration using viper
 	viper.SetConfigName("config")
@@ -76,11 +77,15 @@ func main() {
 				delete(masters, oldmaster)
 				irccon.Privmsgf(channame, "%s is now removed from masters.\n", oldmaster)
 
+			} else if strings.HasPrefix(message, "#questions off") && masters[nick] {
+				canAsk = false
+			} else if strings.HasPrefix(message, "#questions on") && masters[nick] {
+				canAsk = true
 			} else if message == "!" {
 				if !classStatus {
 					msg := fmt.Sprintf("%s no class is going on. Feel free to ask any question.\n", nick)
 					irccon.Privmsgf(channame, msg)
-				} else if !queue[nick] {
+				} else if !queue[nick] && canAsk {
 					questions = append(questions, nick)
 					queue[nick] = true
 				}
@@ -97,7 +102,7 @@ func main() {
 				} else {
 					irccon.Privmsgf(channame, "No one is in the queue.\n")
 				}
-			} else if message == "startclass" && !classStatus && masters[nick] {
+			} else if message == "#startclass" && !classStatus && masters[nick] {
 				// We will start a class now
 				irccon.Privmsgf(channame, "----BEGIN CLASS----\n")
 				classStatus = true
@@ -105,7 +110,7 @@ func main() {
 				fname := t.Format("Logs-2006-01-02-15-04.txt")
 				f, _ = os.Create(fname)
 				f.WriteString("----BEGIN CLASS----\n")
-			} else if message == "endclass" && classStatus && masters[nick] {
+			} else if message == "#endclass" && classStatus && masters[nick] {
 				irccon.Privmsgf(channame, "----END CLASS----\n")
 				classStatus = false
 				f.WriteString("----END CLASS----\n")
