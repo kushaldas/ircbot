@@ -90,15 +90,20 @@ Ask the next person to ask their question
 
     next
 
+<<<<<<< HEAD
 Stop taking quesions
 ====================
+=======
+Stop taking anymore questions
+============================
+>>>>>>> 2aa6a76... Minor typo fixes missed earlier
 
 ::
 
     #questions off
 
 
-Start taking quesions again
+Start taking questions again
 ===========================
 
 ::
@@ -114,4 +119,8 @@ Can students ask questions now?
 
     #questions
 
+
 This gets reset to true, everytime we start a new session.
+=======
+
+
