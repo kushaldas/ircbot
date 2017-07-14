@@ -8,7 +8,7 @@ This also means it follows the way, we organize the sessions on
 #dgplug channel on freenode.
 
 config.yml
-===========
+==========
 
 This file contains the configuration of the tool.
 An example is given below:
@@ -39,8 +39,8 @@ Add a master
 
 Execute the above command in your channel.
 
-Removes a master
-================
+Remove a master
+===============
 
 ::
 
@@ -58,7 +58,7 @@ Start a session
 Give the above command in the *IRC channel* itself. Remember, that this does not work in PM.
 
 End a class
-============
+===========
 
 ::
 
@@ -73,8 +73,8 @@ You can also end in a different way, which doesn’t try to upload the log.
 
     #endclass nolog
 
-Raise a hand to ask a quesion
-=============================
+Raise a hand to ask a question
+==============================
 
 ::
 
@@ -90,16 +90,19 @@ Ask the next person to ask their question
 
     next
 
-Stop taking quesions
-====================
+
+Stop taking questions
+=====================
+
+
 
 ::
 
     #questions off
 
 
-Start taking quesions again
-===========================
+Start taking questions again
+============================
 
 ::
 
@@ -114,4 +117,8 @@ Can students ask questions now?
 
     #questions
 
+
 This gets reset to true, everytime we start a new session.
+==========================================================
+
+
