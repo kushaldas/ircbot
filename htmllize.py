@@ -21,6 +21,7 @@ The name of the file is also very specific: Logs-2018-06-18-04-46.txt
 import sys
 from pathlib import Path
 from string import Template
+import re
 
 DATE_DELIM = "/"
 BASE_TEMPLATE = "logs-template.tmpl"
@@ -57,6 +58,9 @@ HTML_LOG_TEMPLATE = """\
       </tr>
 """
 
+WEB_URL_REGEX = r'(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9]\.[^\s]{2,})'
+WEB_URL_REP_REGEX = r'<a href="\1" target="_blank">\1</a>'
+
 
 def get_metadata(log_file_name):
     """Parse the log file name to get the data and time.
@@ -89,9 +93,13 @@ def parse_log_line(line):
     time, nick, *message = line.split(" ")
     # Strip the [ ] from the time.
     time = time[1:-1].strip()
-    # Strip the < > from the time.
+    # Strip the < > from the nick.
     nick = nick[1:-1].strip()
-    return (time, nick, " ".join(message))
+
+    message = " ".join(message)
+    message = re.sub(WEB_URL_REGEX, WEB_URL_REP_REGEX, message)
+
+    return (time, nick, message)
 
 
 def generate_html(log_file):
