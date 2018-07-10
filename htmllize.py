@@ -58,7 +58,10 @@ HTML_LOG_TEMPLATE = """\
       </tr>
 """
 
-WEB_URL_REGEX = r'(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9]\.[^\s]{2,})'
+# Here is the link to git gist with rail road diagram for web url regex
+# https://gist.github.com/RatanShreshtha/76063f21ddbfb0335a341ce1c272170e
+
+WEB_URL_REGEX = r'(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9]\.[^\s]{2,})'
 WEB_URL_REP_REGEX = r'<a href="\1" target="_blank">\1</a>'
 
 
