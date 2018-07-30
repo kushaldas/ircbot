@@ -146,6 +146,12 @@ func main() {
 				classStatus = false
 				f.WriteString("----END CLASS----\n")
 				f.Close()
+				// clean up the queue
+				questions = nil
+				questions = make([]string, 0)
+				queue = map[string]bool{}
+
+				// Now check if we want to upload or not.
 				if !strings.HasSuffix(message, "nolog") {
 					// Now we will upload the log
 					location := viper.GetString("destination")
@@ -161,7 +167,20 @@ func main() {
 			tstamp := time.Now().UTC()
 			f.WriteString(fmt.Sprintf("[%s] <%s> %s\n", tstamp.Format("15:04"), nick, message))
 
-		} else if masters[nick] {
+		} else {
+			if message == "class" || message == "session" {
+				msg := ""
+				if classStatus {
+					msg = "Session is going on."
+				} else {
+					msg = "No session is going on."
+				}
+				irccon.Privmsg(nick, msg)
+			}
+		}
+
+		// The following is only from masters.
+		if masters[nick] && !strings.HasPrefix(channame, "#") {
 			if message == "showqueue" {
 				irccon.Privmsg(nick, strings.Join(questions, ","))
 			} else if message == "masters" {
