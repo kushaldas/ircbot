@@ -11,7 +11,7 @@ import (
 	"os/exec"
 
 	"github.com/spf13/viper"
-	"github.com/thoj/go-ircevent"
+	irc "github.com/thoj/go-ircevent"
 )
 
 const serverssl = "irc.freenode.net:7000"
@@ -33,9 +33,8 @@ func scp(frompath string, topath string, optargs ...string) bool {
 	if err != nil {
 		fmt.Println("Error in scp:", err)
 		return false
-	} else {
-		fmt.Println("Log uploaded")
 	}
+	fmt.Println("Log uploaded")
 	return true
 }
 
@@ -124,13 +123,21 @@ func main() {
 				if l > 0 {
 					cnick := questions[0]
 					questions = questions[1:]
-					irccon.Privmsgf(channame, fmt.Sprintf("%s ask your question.", cnick))
+					message := fmt.Sprintf("%s ask your question.", cnick)
+					irccon.Privmsgf(channame, message)
+					tstamp := time.Now().UTC()
+					f.WriteString(fmt.Sprintf("[%s] <%s> %s\n", tstamp.Format("15:04"), viper.GetString("nick"), message))
 					if len(questions) > 0 {
-						irccon.Privmsgf(channame, fmt.Sprintf("%s you are next, get ready with your question.\n", questions[0]))
+						message = fmt.Sprintf("%s you are next, get ready with your question.\n", questions[0])
+						irccon.Privmsgf(channame, message)
+						tstamp = time.Now().UTC()
+						f.WriteString(fmt.Sprintf("[%s] <%s> %s\n", tstamp.Format("15:04"), viper.GetString("nick"), message))
 					}
 					delete(queue, cnick)
 				} else {
-					irccon.Privmsgf(channame, "No one is in the queue.\n")
+					irccon.Privmsgf(channame, "No one is in the queue.")
+					tstamp := time.Now().UTC()
+					f.WriteString(fmt.Sprintf("[%s] <%s> %s\n", tstamp.Format("15:04"), viper.GetString("nick"), "No one is in the queue."))
 				}
 			} else if message == "#startclass" && !classStatus && masters[nick] {
 				// We will start a class now
@@ -185,7 +192,7 @@ func main() {
 				irccon.Privmsg(nick, strings.Join(questions, ","))
 			} else if message == "masters" {
 				localname := []string{}
-				for k, _ := range masters {
+				for k := range masters {
 					localname = append(localname, k)
 				}
 				irccon.Privmsg(nick, strings.Join(localname, ","))
