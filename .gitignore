@@ -1,0 +1,4 @@
+*.pem
+config.toml
+ircbot
+.vscode

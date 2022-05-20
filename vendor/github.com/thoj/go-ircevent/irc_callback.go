@@ -1,27 +1,35 @@
 package irc
 
 import (
+	"context"
+	"reflect"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
 )
 
+// Tuple type for uniquely identifying callbacks
+type CallbackID struct {
+	EventCode string
+	ID        int
+}
+
 // Register a callback to a connection and event code. A callback is a function
 // which takes only an Event pointer as parameter. Valid event codes are all
-// IRC/CTCP commands and error/response codes. This function returns the ID of
-// the registered callback for later management.
+// IRC/CTCP commands and error/response codes. To register a callback for all
+// events pass "*" as the event code. This function returns the ID of the
+// registered callback for later management.
 func (irc *Connection) AddCallback(eventcode string, callback func(*Event)) int {
 	eventcode = strings.ToUpper(eventcode)
-	id := 0
 
 	irc.eventsMutex.Lock()
 	_, ok := irc.events[eventcode]
 	if !ok {
 		irc.events[eventcode] = make(map[int]func(*Event))
-		id = 0
-	} else {
-		id = len(irc.events[eventcode])
 	}
+	id := irc.idCounter
+	irc.idCounter++
 	irc.events[eventcode][id] = callback
 	irc.eventsMutex.Unlock()
 	return id
@@ -126,32 +134,70 @@ func (irc *Connection) RunCallbacks(event *Event) {
 	}
 
 	irc.eventsMutex.Lock()
-	callbacks, ok := irc.events[event.Code]
-	irc.eventsMutex.Unlock()
+	callbacks := make(map[int]func(*Event))
+	eventCallbacks, ok := irc.events[event.Code]
+	id := 0
 	if ok {
-		if irc.VerboseCallbackHandler {
-			irc.Log.Printf("%v (%v) >> %#v\n", event.Code, len(callbacks), event)
-		}
-
-		for _, callback := range callbacks {
-			callback(event)
-		}
-	} else if irc.VerboseCallbackHandler {
-		irc.Log.Printf("%v (0) >> %#v\n", event.Code, event)
-	}
-
-	irc.eventsMutex.Lock()
-	allcallbacks, ok := irc.events["*"]
-	irc.eventsMutex.Unlock()
-	if ok {
-		if irc.VerboseCallbackHandler {
-			irc.Log.Printf("%v (0) >> %#v\n", event.Code, event)
-		}
-
-		for _, callback := range allcallbacks {
-			callback(event)
+		for _, callback := range eventCallbacks {
+			callbacks[id] = callback
+			id++
 		}
 	}
+	allCallbacks, ok := irc.events["*"]
+	if ok {
+		for _, callback := range allCallbacks {
+			callbacks[id] = callback
+			id++
+		}
+	}
+	irc.eventsMutex.Unlock()
+
+	if irc.VerboseCallbackHandler {
+		irc.Log.Printf("%v (%v) >> %#v\n", event.Code, len(callbacks), event)
+	}
+
+	event.Ctx = context.Background()
+	if irc.CallbackTimeout != 0 {
+		event.Ctx, _ = context.WithTimeout(event.Ctx, irc.CallbackTimeout)
+	}
+
+	done := make(chan int)
+	for id, callback := range callbacks {
+		go func(id int, done chan<- int, cb func(*Event), event *Event) {
+			start := time.Now()
+			cb(event)
+			select {
+			case done <- id:
+			case <-event.Ctx.Done(): // If we timed out, report how long until we eventually finished
+				irc.Log.Printf("Canceled callback %s finished in %s >> %#v\n",
+					getFunctionName(cb),
+					time.Since(start),
+					event,
+				)
+			}
+		}(id, done, callback, event)
+	}
+
+	for len(callbacks) > 0 {
+		select {
+		case jobID := <-done:
+			delete(callbacks, jobID)
+		case <-event.Ctx.Done(): // context timed out!
+			timedOutCallbacks := []string{}
+			for _, cb := range callbacks { // Everything left here did not finish
+				timedOutCallbacks = append(timedOutCallbacks, getFunctionName(cb))
+			}
+			irc.Log.Printf("Timeout while waiting for %d callback(s) to finish (%s)\n",
+				len(callbacks),
+				strings.Join(timedOutCallbacks, ", "),
+			)
+			return
+		}
+	}
+}
+
+func getFunctionName(f func(*Event)) string {
+	return runtime.FuncForPC(reflect.ValueOf(f).Pointer()).Name()
 }
 
 // Set up some initial callbacks to handle the IRC/CTCP protocol.

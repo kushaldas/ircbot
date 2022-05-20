@@ -30,18 +30,24 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"golang.org/x/net/proxy"
+	"golang.org/x/text/encoding"
 )
 
 const (
 	VERSION = "go-ircevent v2.1"
 )
 
+const CAP_TIMEOUT = time.Second * 15
+
 var ErrDisconnected = errors.New("Disconnect Called")
 
 // Read data from a connection. To be used as a goroutine.
 func (irc *Connection) readLoop() {
 	defer irc.Done()
-	br := bufio.NewReaderSize(irc.socket, 512)
+	r := irc.Encoding.NewDecoder().Reader(irc.socket)
+	br := bufio.NewReaderSize(r, 512)
 
 	errChan := irc.ErrorChan()
 
@@ -78,9 +84,8 @@ func (irc *Connection) readLoop() {
 			irc.lastMessage = time.Now()
 			irc.lastMessageMutex.Unlock()
 			event, err := parseToEvent(msg)
-			event.Connection = irc
 			if err == nil {
-				/* XXX: len(args) == 0: args should be empty */
+				event.Connection = irc
 				irc.RunCallbacks(event)
 			}
 		}
@@ -156,6 +161,7 @@ func parseToEvent(msg string) (*Event, error) {
 // Loop to write to a connection. To be used as a goroutine.
 func (irc *Connection) writeLoop() {
 	defer irc.Done()
+	w := irc.Encoding.NewEncoder().Writer(irc.socket)
 	errChan := irc.ErrorChan()
 	for {
 		select {
@@ -173,7 +179,7 @@ func (irc *Connection) writeLoop() {
 			// Set a write deadline based on the time out
 			irc.socket.SetWriteDeadline(time.Now().Add(irc.Timeout))
 
-			_, err := irc.socket.Write([]byte(b))
+			_, err := w.Write([]byte(b))
 
 			// Past blocking write, bin timeout
 			var zero time.Time
@@ -231,7 +237,9 @@ func (irc *Connection) Loop() {
 	errChan := irc.ErrorChan()
 	for !irc.isQuitting() {
 		err := <-errChan
-		close(irc.end)
+		if irc.end != nil {
+			close(irc.end)
+		}
 		irc.Wait()
 		for !irc.isQuitting() {
 			irc.Log.Printf("Error, disconnected: %s\n", err)
@@ -395,13 +403,14 @@ func (irc *Connection) Disconnect() {
 		close(irc.end)
 	}
 
+	irc.Wait()
+
 	irc.end = nil
 
 	if irc.pwrite != nil {
 		close(irc.pwrite)
 	}
 
-	irc.Wait()
 	if irc.socket != nil {
 		irc.socket.Close()
 	}
@@ -426,17 +435,16 @@ func (irc *Connection) Connect(server string) error {
 	if len(irc.Server) == 0 {
 		return errors.New("empty 'server'")
 	}
-	if strings.Count(irc.Server, ":") != 1 {
-		return errors.New("wrong number of ':' in address")
-	}
 	if strings.Index(irc.Server, ":") == 0 {
 		return errors.New("hostname is missing")
 	}
 	if strings.Index(irc.Server, ":") == len(irc.Server)-1 {
 		return errors.New("port missing")
 	}
-	// check for valid range
-	ports := strings.Split(irc.Server, ":")[1]
+	_, ports, err := net.SplitHostPort(irc.Server)
+	if err != nil {
+		return errors.New("wrong address string")
+	}
 	port, err := strconv.Atoi(ports)
 	if err != nil {
 		return errors.New("extracting port failed")
@@ -454,21 +462,24 @@ func (irc *Connection) Connect(server string) error {
 		return errors.New("empty 'user'")
 	}
 
-	if irc.UseTLS {
-		dialer := &net.Dialer{Timeout: irc.Timeout}
-		irc.socket, err = tls.DialWithDialer(dialer, "tcp", irc.Server, irc.TLSConfig)
-	} else {
-		irc.socket, err = net.DialTimeout("tcp", irc.Server, irc.Timeout)
-	}
+	dialer := proxy.FromEnvironmentUsing(&net.Dialer{Timeout: irc.Timeout})
+	irc.socket, err = dialer.Dial("tcp", irc.Server)
 	if err != nil {
 		return err
+	}
+	if irc.UseTLS {
+		irc.socket = tls.Client(irc.socket, irc.TLSConfig)
+	}
+
+	if irc.Encoding == nil {
+		irc.Encoding = encoding.Nop
 	}
 
 	irc.stopped = false
 	irc.Log.Printf("Connected to %s (%s)\n", irc.Server, irc.socket.RemoteAddr())
 
 	irc.pwrite = make(chan string, 10)
-	irc.Error = make(chan error, 2)
+	irc.Error = make(chan error, 10)
 	irc.Add(3)
 	go irc.readLoop()
 	go irc.writeLoop()
@@ -499,10 +510,20 @@ func (irc *Connection) Connect(server string) error {
 
 // Negotiate IRCv3 capabilities
 func (irc *Connection) negotiateCaps() error {
+	irc.RequestCaps = nil
+	irc.AcknowledgedCaps = nil
+
+	var negotiationCallbacks []CallbackID
+	defer func() {
+		for _, callback := range negotiationCallbacks {
+			irc.RemoveCallback(callback.EventCode, callback.ID)
+		}
+	}()
+
 	saslResChan := make(chan *SASLResult)
 	if irc.UseSASL {
 		irc.RequestCaps = append(irc.RequestCaps, "sasl")
-		irc.setupSASLCallbacks(saslResChan)
+		negotiationCallbacks = irc.setupSASLCallbacks(saslResChan)
 	}
 
 	if len(irc.RequestCaps) == 0 {
@@ -510,7 +531,7 @@ func (irc *Connection) negotiateCaps() error {
 	}
 
 	cap_chan := make(chan bool, len(irc.RequestCaps))
-	irc.AddCallback("CAP", func(e *Event) {
+	id := irc.AddCallback("CAP", func(e *Event) {
 		if len(e.Arguments) != 3 {
 			return
 		}
@@ -543,6 +564,7 @@ func (irc *Connection) negotiateCaps() error {
 			}
 		}
 	})
+	negotiationCallbacks = append(negotiationCallbacks, CallbackID{"CAP", id})
 
 	irc.pwrite <- "CAP LS\r\n"
 
@@ -550,28 +572,32 @@ func (irc *Connection) negotiateCaps() error {
 		select {
 		case res := <-saslResChan:
 			if res.Failed {
-				close(saslResChan)
 				return res.Err
 			}
-		case <-time.After(time.Second * 15):
-			close(saslResChan)
-			return errors.New("SASL setup timed out. This shouldn't happen.")
+		case <-time.After(CAP_TIMEOUT):
+			// Raise an error if we can't authenticate with SASL.
+			return errors.New("SASL setup timed out. Does the server support SASL?")
 		}
 	}
 
-	// Wait for all capabilities to be ACKed or NAKed before ending negotiation
-	for i := 0; i < len(irc.RequestCaps); i++ {
-		<-cap_chan
+	remaining_caps := len(irc.RequestCaps)
+
+	select {
+	case <-cap_chan:
+		remaining_caps--
+	case <-time.After(CAP_TIMEOUT):
+		// The server probably doesn't implement CAP LS, which is "normal".
+		return nil
 	}
+
+	// Wait for all capabilities to be ACKed or NAKed before ending negotiation
+	for remaining_caps > 0 {
+		<-cap_chan
+		remaining_caps--
+	}
+
 	irc.pwrite <- fmt.Sprintf("CAP END\r\n")
 
-	realname := irc.user
-	if irc.RealName != "" {
-		realname = irc.RealName
-	}
-
-	irc.pwrite <- fmt.Sprintf("NICK %s\r\n", irc.nick)
-	irc.pwrite <- fmt.Sprintf("USER %s 0.0.0.0 0.0.0.0 :%s\r\n", irc.user, realname)
 	return nil
 }
 
