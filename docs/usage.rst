@@ -15,23 +15,17 @@ An example is given below:
 
 ::
 
-    ---
-    nick: "botnic,"
-    fullname: "fullname"
-    channel: "#yourchannel"
-    destination: "Path for autoupload the logs"
-    masters:
-     - kushal
-     - sayan
-     - praveenkumar
-     - chandankumar
-     - rtnpro
-     - mbuf
+    nick = "ircbot42"
+    realname = "ircbot42"
+    fullname = "ircbot42"
+    channel = "#libera"
+    password = ""
+    trainers = ["nick1", "nick2"]
 
-Masters are nicks who have power over the bot. They can execute various actions, as explained below.
+trainers are nicks who have power over the bot. They can execute various actions, as explained below.
 
-Add a master
-============
+Add a trainer
+=============
 
 ::
 
@@ -39,8 +33,8 @@ Add a master
 
 Execute the above command in your channel.
 
-Remove a master
-===============
+Remove a trainer
+================
 
 ::
 

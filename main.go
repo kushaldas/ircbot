@@ -17,7 +17,7 @@ import (
 
 const serverssl = "irc.libera.chat:6697"
 
-var masters = map[string]bool{}
+var trainers = map[string]bool{}
 var questions []string
 var queue = map[string]bool{}
 
@@ -81,7 +81,7 @@ func main() {
 	ms := viper.GetStringSlice("trainers")
 	// Now let us populate the trainers map
 	for _, v := range ms {
-		masters[v] = true
+		trainers[v] = true
 	}
 
 	cert := get_sasl_cert()
@@ -113,23 +113,23 @@ func main() {
 				// Let us reply back
 				irccon.Privmsgf(channame, "%s: hello\n", nick)
 			} else if strings.HasPrefix(message, "add: ") {
-				// We will add someone into the masters list
+				// We will add someone into the trainers list
 				// If this command is given by a master
 				newmaster := strings.Split(message, " ")[1]
-				if masters[nick] {
-					masters[newmaster] = true
+				if trainers[nick] {
+					trainers[newmaster] = true
 					irccon.Privmsgf(channame, "%s is now a master.\n", newmaster)
 				}
-			} else if strings.HasPrefix(message, "rm: ") && masters[nick] {
+			} else if strings.HasPrefix(message, "rm: ") && trainers[nick] {
 				oldmaster := strings.Split(message, " ")[1]
-				delete(masters, oldmaster)
-				irccon.Privmsgf(channame, "%s is now removed from masters.\n", oldmaster)
+				delete(trainers, oldmaster)
+				irccon.Privmsgf(channame, "%s is now removed from trainers.\n", oldmaster)
 
-			} else if strings.HasPrefix(message, "#questions off") && masters[nick] {
+			} else if strings.HasPrefix(message, "#questions off") && trainers[nick] {
 				canAsk = false
-			} else if strings.HasPrefix(message, "#questions on") && masters[nick] {
+			} else if strings.HasPrefix(message, "#questions on") && trainers[nick] {
 				canAsk = true
-			} else if strings.HasPrefix(message, "#questions") && masters[nick] {
+			} else if strings.HasPrefix(message, "#questions") && trainers[nick] {
 				var word = "No"
 				if canAsk {
 					word = "Yes"
@@ -144,7 +144,7 @@ func main() {
 					questions = append(questions, nick)
 					queue[nick] = true
 				}
-			} else if message == "next" && masters[nick] {
+			} else if message == "next" && trainers[nick] {
 				l := len(questions)
 				if l > 0 {
 					cnick := questions[0]
@@ -157,7 +157,7 @@ func main() {
 				} else {
 					irccon.Privmsgf(channame, "No one is in the queue.\n")
 				}
-			} else if message == "#startclass" && !classStatus && masters[nick] {
+			} else if message == "#startclass" && !classStatus && trainers[nick] {
 				// We will start a class now
 				irccon.Privmsgf(channame, "----BEGIN CLASS----\n")
 				classStatus = true
@@ -166,7 +166,7 @@ func main() {
 				fname = t.Format("Logs-2006-01-02-15-04.txt")
 				f, _ = os.Create(fname)
 				f.WriteString("----BEGIN CLASS----\n")
-			} else if strings.HasPrefix(message, "#endclass") && classStatus && masters[nick] {
+			} else if strings.HasPrefix(message, "#endclass") && classStatus && trainers[nick] {
 				irccon.Privmsgf(channame, "----END CLASS----\n")
 				classStatus = false
 				f.WriteString("----END CLASS----\n")
@@ -204,13 +204,13 @@ func main() {
 			}
 		}
 
-		// The following is only from masters.
-		if masters[nick] && !strings.HasPrefix(channame, "#") {
+		// The following is only from trainers.
+		if trainers[nick] && !strings.HasPrefix(channame, "#") {
 			if message == "showqueue" {
 				irccon.Privmsg(nick, strings.Join(questions, ","))
-			} else if message == "masters" {
+			} else if message == "trainers" {
 				localname := []string{}
-				for k, _ := range masters {
+				for k, _ := range trainers {
 					localname = append(localname, k)
 				}
 				irccon.Privmsg(nick, strings.Join(localname, ","))
