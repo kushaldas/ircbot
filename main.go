@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/tls"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 	"time"
@@ -11,10 +12,10 @@ import (
 	"os/exec"
 
 	"github.com/spf13/viper"
-	"github.com/thoj/go-ircevent"
+	irc "github.com/thoj/go-ircevent"
 )
 
-const serverssl = "irc.freenode.net:7000"
+const serverssl = "irc.libera.chat:6697"
 
 var masters = map[string]bool{}
 var questions []string
@@ -39,6 +40,23 @@ func scp(frompath string, topath string, optargs ...string) bool {
 	return true
 }
 
+func get_sasl_cert() tls.Certificate {
+	key, err := os.ReadFile("key.pem")
+	if err != nil {
+		log.Fatal(err)
+	}
+	certdata, err := os.ReadFile("cert.pem")
+	if err != nil {
+		log.Fatal(err)
+	}
+	cert, err := tls.X509KeyPair([]byte(certdata), []byte(key))
+	if err != nil {
+		log.Fatalf("SASL EXTERNAL cert creation failed: %s", err)
+	}
+	return cert
+
+}
+
 func main() {
 	var f *os.File
 	var fname string
@@ -47,6 +65,7 @@ func main() {
 
 	// The following is for configuration using viper
 	viper.SetConfigName("config")
+	viper.SetConfigType("toml")
 	viper.AddConfigPath("./")
 	err := viper.ReadInConfig()
 
@@ -56,21 +75,27 @@ func main() {
 	viper.SetDefault("nick", "yournick")
 	viper.SetDefault("fullname", "Our nice bot")
 	viper.SetDefault("channel", "#yooooooops")
-	viper.SetDefault("masters", []string{"kushal"})
+	viper.SetDefault("trainers", []string{"kushal"})
 
 	channel := viper.GetString("channel")
-	ms := viper.GetStringSlice("masters")
-	// Now let us populate the masters map
+	ms := viper.GetStringSlice("trainers")
+	// Now let us populate the trainers map
 	for _, v := range ms {
 		masters[v] = true
 	}
 
+	cert := get_sasl_cert()
+
 	irccon := irc.IRC(viper.GetString("nick"), viper.GetString("fullname"))
+
 	defer irccon.Quit()
 	irccon.VerboseCallbackHandler = true
-	irccon.Debug = false
+	irccon.Debug = true
+	irccon.UseSASL = true
+	irccon.SASLMech = "EXTERNAL"
+	irccon.Password = viper.GetString("password")
 	irccon.UseTLS = true
-	irccon.TLSConfig = &tls.Config{InsecureSkipVerify: true}
+	irccon.TLSConfig = &tls.Config{InsecureSkipVerify: true, Certificates: []tls.Certificate{cert}}
 	irccon.AddCallback("001", func(e *irc.Event) { irccon.Join(channel) })
 
 	irccon.AddCallback("366", func(e *irc.Event) {
