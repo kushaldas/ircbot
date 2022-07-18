@@ -114,11 +114,11 @@ func main() {
 				irccon.Privmsgf(channame, "%s: hello\n", nick)
 			} else if strings.HasPrefix(message, "add: ") {
 				// We will add someone into the trainers list
-				// If this command is given by a master
+				// If this command is given by a trainer
 				newmaster := strings.Split(message, " ")[1]
 				if trainers[nick] {
 					trainers[newmaster] = true
-					irccon.Privmsgf(channame, "%s is now a master.\n", newmaster)
+					irccon.Privmsgf(channame, "%s is now a trainer.\n", newmaster)
 				}
 			} else if strings.HasPrefix(message, "rm: ") && trainers[nick] {
 				oldmaster := strings.Split(message, " ")[1]
